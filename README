@@ -1,0 +1,185 @@
+
+This is a collection of baremetal examples specifically for the
+raspberry pi zero.  Look at my other repositories for other raspberry
+pi boards.
+
+I have a raspberry pi repo at github (same place you found this repo)
+that has been popular (relative to anything else I have put out there).
+It started as soon as I got my first raspberry pi which was part of
+the mad rush when they first came out for the general public.  For some
+reason I assumed the design of both the board and chip would remain
+somewhat static.  But that didnt happen.  First the boards then the
+chips.  Granted the pi-zero changed once, but didnt affect anything
+I was using.  And who knows simply writing this down may cause a
+murphy's law thing and ruin this repo as well (they may change the
+chip/board or get rid of it all together).  I do not dislike the other
+chips or cards, but, the ARMv7 and ARMv8 cores independent of being
+multicore, have added a plethera of security and priority features
+that I struggle personally to absorb.  I have absorbed enough to get
+through my normal mix of examples, but the ARMv6 has close ties to the
+early ARM cores, and has enough features to allow Linux or other
+operating systems to run, but does not have a myriad of different
+possible ways of running it with a number of rules for each.  So with
+the pi-zero I can both isolate the examples I have already written, and
+perhaps refactor, and make some more.
+
+As far as I am concerned baremetal means no operating system.  The
+cloud computing community is trying to mis-use the word to mean fewer
+operating systems, so I recommend you use the term "cloud baremetal"
+for that incorrect use case.  Or use whatever term you want.  These
+examples take the reference material with specific register addresses
+in the ARM address space and talk to those register directly to make
+things happen.  Or to create some simple libraries/functions that
+are called by the main program, but there is no operating system to
+take that direct access to the hardware away from you.  At the same
+time I am taking control of the GNU compiler toolchain, mostly for
+portability reasons (all different pre-builts and ways to build your
+own that wouldnt have worked), but also as an educational tool for
+the first baremetal stumbling block, just getting the thing to boot.
+
+There is a very nice community of fellow baremetal developers at the
+raspberry pi website in the forums under Programming -> baremetal.
+
+https://www.raspberrypi.org
+
+So click on forums at the top then under Programming the first forum
+there is baremetal (alphabetically not because we are any more
+important than others).
+
+Lets dive in and then talk about what is going on.
+
+
+---- building the sd card ----
+
+Go to
+
+https://github.com/raspberrypi
+
+You DO NOT need to clone any of these repositories.
+
+Click on the firmware repo
+Then the boot directory
+
+bootcode.bin file then click on View Raw to download (or right click
+and save as depending on your browser).
+
+then back up one level and download start.elf the same way.
+
+Those are all the files we need from this repo, dont need kernel.img
+or anything else.
+
+You are going to need an sd card, doesnt need to be very big 1GB,
+2GB, etc.  Can probalby only get 4GB, 8GB or larger these days, thos
+are fine.
+
+Format the sd card for FAT32, if not already, you wont need any
+other files so you can clean up the root directory.
+
+Copy bootcode.bin and start.elf to the root directory of the sdcard.
+I have left a kernel.img file in the root directory of this repo
+copy that file over as well, do not create a config.txt like you read
+about on other sites, will cover that later.  Safely unmount your sd
+card and place it in the pi-zero, plug a usb cable into the connector
+nearest the corner.  The led nearest that corner should blink in a
+heartbeat like manner, two blinks, pause, two blinks, pause...If this
+doesnt work then you cant go any further, either you have done something
+wrong or they have changed the firmware in a way that is now incompatible
+with my example.  The heartbeat directory contains the source for this
+kernel.img.
+
+----
+
+One of two things is going to happen from here on out.  For each example
+or at least almost all of them.  You can copy the kernel.img file
+from that example to the sd card, and put it back in the raspi and
+power it on.  I call this the sd card dance.
+
+1) power off raspi
+2) remove sd card
+3) insert sd card in reader
+4) plug reader into computer
+5) mount/wait
+6) copy binary file to kernel.img
+7) sync/wait
+8) unmount
+9) insert sd card in raspi
+10) power raspi
+11) repeat
+
+And that is just part of the job if this is the programmable interface
+you have been given then like myself and others you may have to repeat
+this dance hundreds of times per application.
+
+The first simplest alternative is to make or use a bootloader.  I have
+one or a few and they are about as lean and mean and simple as it gets.
+No features, I have no interest in hundreds of thousands of lines of
+code in a bootloader, or a bootloader that pretty much is or needs
+an operating system itself just to deal with all of its features.  My
+bootloader will allow you to do the sd card dance one more time then
+after that you can download your program over serial/uart into the
+pi's memory and run it.  For each build you want to test you then
+only need to:
+
+1) power off raspi
+2) power on raspi
+3) download program
+4) run program
+
+Or if you add a reset button
+
+1) reset raspi
+2) download program
+3) run program
+
+There are two pins near the P1 header that say RUN next to them if you
+short those pins together it will reset the PI.
+
+Unfortunately for everyone the pi-zero did not come with the P1 headers
+installed, so at some point you are going to want access to at least the
+uart pins if not the whole header.  So either some soldering is required
+or some push in friction based pins are needed.  Likewise a momentary
+switch (normally open) to use as a reset button.  The A+ board was nice
+when it came out as it was less expensive than the main raspi board but
+it still had the P1 header installed.
+
+I now have a collection of various FTDI breakout boards, you can call
+them usb to serial but many of the FTDI chips have other features. for
+this though we only need some sort of usb to 3.3V level uart/serial
+interface (RS-232 is the wrong term here for multiple reasons, so is
+COM Port, although less so).  Doesnt have to be FTDI based there are
+other usb to uart chips that can do the same thing and work just fine.
+sparkfun, adafruit, ebay, many solutions.  Note that typically each is
+marked relative to itself so the tx is transmit and rx is receive you
+want the tx of the raspi connected to the rx of whatever board you
+have.  And vice versa.  I recommend using the same computer to power
+and connect to both boards so you dont have ground potential between
+them.  You dont necessarily need to connect grounds in that case,
+you do not want to connect 3.3v between the boards or any other signal
+really unless you know what you are doing.  For a new setup as
+soon as I plug them in I put my fingers on the chips of each board
+and if they get hot really quickly something is wrong, it may be too
+late but you have a chance of preventing smoke or burning or letting
+it sit there taking its time to melt down when you wander off.
+
+I use female to female jumper wires from sparkfun (adafruit has them too)
+and one of my collection of breakout boards, you can get some from asia
+on ebay for like $1.50 each or so, with a 3.3v and 5v jumper (which
+you move to the 3.3v side), pins already installed.  But you take
+the risk of using ebay.  Adafruit and SparkFun have $15 breakouts and
+there are some usb cables with female header connectors for around $10
+if you shop for them.  Any one of these combinations will do, note this
+is a tool you will need in your baremetal programmers toolbox, buy
+a bunch on ebay or elsewhere.  Along with jumper wires.
+
+
+WIP (Work In Progress)...
+
+
+
+
+
+
+
+
+
+

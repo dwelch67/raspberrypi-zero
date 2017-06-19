@@ -1,0 +1,9 @@
+
+See the top level README for information on documentation for the pi-zero
+
+This is an LED blinker example for the pi zero, the source for the
+kernel.img binary in the root directory of this repo.
+
+The pi zero has one led that is tied to gpio 47.
+
+See blinker01 for more information.
