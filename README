@@ -138,39 +138,86 @@ Unfortunately for everyone the pi-zero did not come with the P1 headers
 installed, so at some point you are going to want access to at least the
 uart pins if not the whole header.  So either some soldering is required
 or some push in friction based pins are needed.  Likewise a momentary
-switch (normally open) to use as a reset button.  The A+ board was nice
-when it came out as it was less expensive than the main raspi board but
-it still had the P1 header installed.
+switch (normally open) to use as a reset button.
 
-I now have a collection of various FTDI breakout boards, you can call
-them usb to serial but many of the FTDI chips have other features. for
-this though we only need some sort of usb to 3.3V level uart/serial
-interface (RS-232 is the wrong term here for multiple reasons, so is
-COM Port, although less so).  Doesnt have to be FTDI based there are
-other usb to uart chips that can do the same thing and work just fine.
-sparkfun, adafruit, ebay, many solutions.  Note that typically each is
-marked relative to itself so the tx is transmit and rx is receive you
-want the tx of the raspi connected to the rx of whatever board you
-have.  And vice versa.  I recommend using the same computer to power
-and connect to both boards so you dont have ground potential between
-them.  You dont necessarily need to connect grounds in that case,
-you do not want to connect 3.3v between the boards or any other signal
-really unless you know what you are doing.  For a new setup as
-soon as I plug them in I put my fingers on the chips of each board
-and if they get hot really quickly something is wrong, it may be too
-late but you have a chance of preventing smoke or burning or letting
-it sit there taking its time to melt down when you wander off.
+In order to use my bootloader you will need to gain access to those
+uart pins, direct wired or header pins or some paperclips between boards
+whatever.  This is actually not a compilicated thing you just need
+the right tools (not expensive for ones that will work) and the
+confidence to try.  I now have a collection of boards, almost all
+FTDI based, but that is just due to their popularity, they are a
+more expensive part than others.  Note RS-232 has no business in this
+discussion, it is an electrical standard and will blow up your board,
+you are looking for 3.3v serial or uart from usb on the host side.
 
-I use female to female jumper wires from sparkfun (adafruit has them too)
-and one of my collection of breakout boards, you can get some from asia
-on ebay for like $1.50 each or so, with a 3.3v and 5v jumper (which
-you move to the 3.3v side), pins already installed.  But you take
-the risk of using ebay.  Adafruit and SparkFun have $15 breakouts and
-there are some usb cables with female header connectors for around $10
-if you shop for them.  Any one of these combinations will do, note this
-is a tool you will need in your baremetal programmers toolbox, buy
-a bunch on ebay or elsewhere.  Along with jumper wires.
+Some examples
 
+https://www.adafruit.com/product/954
+https://www.sparkfun.com/products/9873
+https://www.sparkfun.com/products/13263
+
+At least one of which (I reserve the right to change this list at any
+time) may also require soldering or cuts and jumpers to select the
+desired voltage.  I bought a bunch from asia on ebay for like $2 each
+or less with a 3.3v and 5v jumper you want 3.3v for the raspberry pi.
+
+A uart solution, along with an led and resistor to blink are your
+two most important tools in your baremetal programmers toolbox.  Plus
+jumper wires or some way to hook these things up.  Soldering is
+eventually required, but you can sometimes just get someone to do
+that for you, or buy it that way.  Note that the general rule is the
+tx and rx are in reference to that board/product so the raspberry pi
+tx pin is an output, and rx an input, so you want to hook the tx of the
+uart to the rx of the raspi and the tx of the raspi to the rx of the
+usb uart board/cable.
+
+I tend to use FTDI breakout boards with male pins on them that came
+with or I added.  And female to female jumper wires I bought in a 100
+pack from Sparkfun.  Adafruit carries these things as well.
+
+
+
+You are going to need to go to the raspberrypi.org baremetal forum page
+https://www.raspberrypi.org click on forums, under programming click on
+baremetal.
+
+or maybe this link works directly
+
+https://www.raspberrypi.org/forums/viewforum.php?f=72
+
+There is a sticky topic near the top called Bare Metal resources.
+(is it bare metal with a space or baremetal without?  I have seen and
+use both)
+
+You definitely need the BCM2835-ARM-Peripherals document
+And note the errata link there as well, there are lots of errors in the
+document (which is true for any vendors documentation).
+
+Either there or just google raspberry pi pinout to see the P1 header
+pins.  
+
+The ones we care about initially are when you are holding the board
+such that you are looking down on the top of the board (the side
+the bulk of the components are on) and the dual row header is on the
+right, the top right pin is pin1 the top left pin is pin 1 and they
+alternate like that.  The right edge of the board is thus 2,4,6,8
+and so on.
+
+2  outer corner
+4
+6  ground
+8  TX out
+10 RX in
+
+Wire these up to your usb uart solution tx to rx, rx to tx.  Figure
+out a dumb terminal program like minicom on linux or teraterm on windows
+or a myriad of others (putty works).  And then you can install my
+bootloader on your sd card, and have a lot of fun without needing to
+remove the sd card again.  When ready to deploy your application then
+copy your binary file to the board with the filename kernel.img and
+power on.  Note that I am initializing some peripherals so if you rely
+on those and didnt initialize them yourself then you have more work
+to do.
 
 WIP (Work In Progress)...
 
