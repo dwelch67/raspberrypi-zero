@@ -1,5 +1,7 @@
 
-See the top level README for information on documentation for the pi-zero
+See the top level README for information on where to find documentation
+for the raspberry pi and the ARM processor inside.  Also find information
+on how to load and run these programs.
 
 This is an LED blinker example for the pi zero, the source for the
 kernel.img binary in the root directory of this repo.

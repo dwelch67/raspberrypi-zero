@@ -187,14 +187,14 @@ https://www.raspberrypi.org/forums/viewforum.php?f=72
 
 There is a sticky topic near the top called Bare Metal resources.
 (is it bare metal with a space or baremetal without?  I have seen and
-use both)
+used both)
 
 You definitely need the BCM2835-ARM-Peripherals document
 And note the errata link there as well, there are lots of errors in the
 document (which is true for any vendors documentation).
 
 Either there or just google raspberry pi pinout to see the P1 header
-pins.  
+pins.
 
 The ones we care about initially are when you are holding the board
 such that you are looking down on the top of the board (the side
