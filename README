@@ -175,7 +175,7 @@ I tend to use FTDI breakout boards with male pins on them that came
 with or I added.  And female to female jumper wires I bought in a 100
 pack from Sparkfun.  Adafruit carries these things as well.
 
-
+-----
 
 You are going to need to go to the raspberrypi.org baremetal forum page
 https://www.raspberrypi.org click on forums, under programming click on
@@ -219,14 +219,216 @@ power on.  Note that I am initializing some peripherals so if you rely
 on those and didnt initialize them yourself then you have more work
 to do.
 
-WIP (Work In Progress)...
+See the bootloader10 directory for more information on using this
+bootloader.  A binary bootloader.img has been left in the base
+directory of this repo.  Copy this file to kernel.img on the sd card
+in order to use this binary.
 
+-----
 
+Start with the blinker programs like blinker01.
 
+The raspberry pi zero has an led tied to GPIO pin 47 so these programs
+will blink that led using various methods to determine the time
+period of the blinks.  Various timers in the system and/or different
+ways to use the timers.
 
+These examples are built to be placed and run from the address 0x8000
+which is NOT where the ARM boots.  What we believe happens is
 
+-- some on chip (p)rom containing gpu code runs on the gpu to find
+the bootcode.bin file and load it (bootcode.bin is a gpu program not ARM)
 
+-- bootcode.bin initializes DRAM and other things and looks for and
+loads start.elf (another gpu program)
 
+--  start.elf contains the main gpu firmware that manages video for us
+and other things.  It then searches for kernel.img and loads it into
+the ARM and runs it.
 
+Note there are now several supported file names other than kernel.img
+that have subtle differences in what they do, this allows you to
+have one sd card you can move around I guess across your collection
+of different raspberry pi cards.  Dont know...We will use kernel.img
+here.  You can modify what happens by using a file named config.txt
+but I recommend against that for these examples.  You can/will make it
+so these cant run if you start to mess around there.  Other than early
+firmare images that were replaced before the masses had access to the
+raspberry pi, for the pi-zero and older pi1 cards using kernel.img
+it places the binary at 0x8000.  The arm boots from address 0x00000000
+there is some code which we can examine if we want, that is placed
+at 0x00000000 that is meant to prep the ARM to run linux, doesnt
+hurt us, and then branches to 0x8000.  So all of these programs are
+built to run at 0x8000, you are welcome to venture off from there if
+you want.
 
+I will copy or replace the bssdata directory/readme that I wrote for
+the other repository.  The very short story is linker scripts dont
+port and are an artform to themselves.  You might not yet realize
+that a program does not enter at main(), there is a bootstrap that
+happens before that.  Something has to zero your uniniitalized
+variables and initialize the others:
 
+unsigned int x;   //assumed to be 0 when main() runs
+unsigned int y=5; //assumed to be 5 when main() runs
+
+This takes code and more important linker script magic to get it all
+somewhat automatically built by the tools, I dont support that
+directly although the longer explanation in bssdata will show some
+ways to make that work since we are running ram only programs here.
+On a microcontroller where baremetal is very common your program
+and information about global variables (x starts off as zero and y
+a five above) needs to be in non-volatile memory: flash/rom.  And then
+copied to ram or some ram zeroed.  Generally the four minimal things
+a bootstrap does
+
+1) set the stack pointer
+2) zero .bss
+3) copy .data
+4) call main()
+
+I skip 2 and 3.
+
+The other thing I do which you may or may not like is I abstract the
+load/store access in PUT32/GET32 type functions:
+
+void PUT32 ( unsigned int address, unsigned int data);
+unsigned int GET32 ( unsigned int address );
+
+Like we see here
+
+    ra=GET32(GPFSEL4);
+    ra&=~(7<<21);
+    ra|=1<<21;
+    PUT32(GPFSEL4,ra);
+
+I have many many years of experience on various platforms at various
+levels and inside and connected to logic simulators for processors
+and/or peripherals.  This abstraction has countless benefits, but
+yes it does have a performance hit, but you can always inline your
+way out of that and not modify the PUT32() calls.  But without the
+abstraction it is a signifcant amount of work to get the features you
+gave up back.  Take it or leave it, your choice, this is how I do it
+and what you will see here.
+
+Since I do spend so much time day job and for fun evenings deep in
+the bowels of the chip or system.  The datasheet on one side of the
+screen and the code on the other, bits and addresses are directly
+visible, layers of hidden header files drive me nuts, cant see it
+cant debug it, sometimes have to compile and disassemble just to
+see what is going on.  In turn this drives other folks nuts, make
+your own repository with your own methods.
+
+This code is not meant to be a library or that kind of solution in
+any way, it is instead a reference design, or an example.  Instead of
+just taking as is, you being to replace a little at a time or the
+whole thing at once.  Meant to be as easy to read as possible in that
+it is usually brute force, very few files so everything is very visible,
+you can look at the manual and the code on the screen at the same time
+and connect all of the dots.  Then re-write it in whatever language or
+style you prefer, as simple or as complicated as you care to make it.
+
+I used to use newlib to primarily get at printf(), but then it became
+difficult to impossible to build for a while there, now it builds
+again but I realized I dont need any of the C library calls, the very
+rare occasion (memcpy, memset perhaps) I just implement my own.  I
+still rely heavily on uart output for debugging and seeing what is
+going on, and have a very small function that prints hex numbers out
+as you will see.
+
+printf("Hello World\n");
+
+Is actually one of the most complicated programs you can write, the
+backend required to support that in a typical system is massive.  A
+large amount of the C library, then there is all the system and video
+stuff.  You will see how simple that can be avoided by using a uart
+and a dumb terminal (the dumb terminal is itself now your computer
+so very complicated as well, but boils down into a dumb task).
+
+If you are not comfortable with binary/hexadecimal, you are not quite
+ready for baremetal or these examples and manuals.  You can count to 16
+with the four digits other than your thumb on one hand (two hands you
+can count well past 256), practice, or practice writing out 0 to 15
+(0x0 to 0xF, 0b0000 to 0b1111) with all three columns, binary, hex and
+decimal
+
+0000 0x0 0
+0001 0x1 1
+0010 0x2 2
+0011 0x3 3
+0100 0x4 4
+0101 0x5 5
+0110 0x6 6
+0111 0x7 7
+1000 0x8 8
+1001 0x9 9
+1010 0xA 10
+1011 0xB 11
+1100 0xC 12
+1101 0xD 13
+1110 0xE 14
+1111 0xF 15
+
+Just memorize it.  That is the easy part, shifting and masking come
+next along with ANDing, ORing, XORing, NOTing...Basic skills you will
+need for writing values to or reading values from registers in
+peripherals.
+
+Also get a calculator that you can convert between hex and decimal with
+two button presses (shift + hex, shift + decimal) or use a soft one
+on your computer or smart phone or get crafty with python or perl or
+bash commands on the terminal.
+
+We are not going to even talk about floating point here.
+
+I have used JTAG on these boards, and may venture into that as I have
+working examples in the other repository.  I use it constantly at my
+day job for running programs, but for most of my raspi work I just use
+my own bootloader on boards that I added a reset button.  The GPU is
+the processor in control on this chip and its JTAG is exposed, the ARM
+jtag is buried and uses shared pins, so you have to have a small program
+that internally connects those pins to the outside just to use JTAG
+to get at the on chip debugger in the ARM.
+
+-----
+
+After the blinker programs look at the uart programs.  Then wonder
+about to see what else I might have shown.
+
+-----
+
+As far as the basic peripherals go this chip is very easy to program,
+now as it often happens the documentation is lacking, most of baremetal
+work is reading docs and figuring things out, the writing of code is
+the easy part, in the noise.  Fortunately as mentioned above there
+is a page that contains errata found by the community.  Microcontrollers
+which this is not are far more concerned about power consumption
+and there are additinal layers of work you have to do, they often
+need more features in the peripherals as that is kinda why you are
+using the thing, where here the peripherals are not why you are using
+the thing, this is meant to be a general purpose computer, not a
+tiny widgit you use to display the time on a clock radio.
+
+-----
+
+The BCM2835 ARM peripheral document mentioned above, which you will
+need along with the ARMv6 Architectural Reference Manual and the
+ARM1176JZFS Technical Reference Manual from ARM's website
+http://infocenter.arm.com
+You might have to give up an email address.  Anyway, the document shows
+addresses for things in the form 0x7Exxxxxx, but there is an important
+drawing that shows how that GPU/system address connects to the ARM
+address space at 0x20xxxxxx.  Now they werent quite thinking this
+through as 0x20000000 is 512MB, granted MMU magic can work around that
+but with the pi2 they changed where the peripherals are in the ARM
+address space to 0x3Fxxxxxx giving a larger linear address space for
+memory.  The pi zero uses the BCM2835 and the gpu firmware and/or
+hardware, but I assume it is a soft setting, uses 0x20xxxxxx as the
+base address for all of the peripherals.
+
+The total advertised amount of memory (DRAM) for a raspberry pi is
+shared between the ARM and GPU, you might be able to do some config.txt
+thing and take it all (and lose graphics/video/display) or move
+the dividing line around a bit.  All of these examples are tiny in
+the KBytes so I dont have to worry about this but may eventually
+depending on your applications you write.

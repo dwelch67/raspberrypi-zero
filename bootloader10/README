@@ -139,3 +139,9 @@ skip:
 
 Where the stack lives for this program, then you need to move that up
 as well.
+
+Oh, and this line too, this limits the overall size of the program
+if you run into this then just make it bigger as well.
+
+    ram : ORIGIN = 0x8000, LENGTH = 0x1000000
+
