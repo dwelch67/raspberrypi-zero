@@ -1,0 +1,58 @@
+
+I run on linux, these examples are tested on linux, other than subtle
+differences like rm vs del in the Makefile, you should be able to use
+these examples on a windows or mac system.
+
+My code is written to be somewhat generic, but the assembly and in
+particular the linker script are specific to the gnu tools because
+that is how the toolchain world works unfortunately.  Since everyone
+can get the gnu tools, they are available for Windows, Mac and Linux,
+but not everyone can or wants to use the pay-for tools (or free tools
+that are specific to one operating system) these examples are written
+and tested using a gnu tool chain.
+
+My personal style is such that this code tends to port across the
+various versions of the gnu tools also it is not specific to
+arm-none-eabi, arm-none-gnueabi, arm-linux-gnueabi and so on (I will
+often type arm-whatever- to indicate these and other flavors).  You
+may need to change the ARMGNU line at the top of my Makefile though.
+
+So, if you are running Ubuntu Linux or a derivative you might only
+need to do this:
+
+apt-get install gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
+
+I am told Fedora has a similar one that you can easily install.
+
+Or you can go here and get a pre-built for your operating system
+
+https://launchpad.net/gcc-arm-embedded
+(which has now moved to an arm site directly)
+https://developer.arm.com/open-source/gnu-toolchain/gnu-rm
+
+Linaro is another well known builder of gnu tools you can download,
+they have a bare-metal (with a dash, same same, baremetal, bare metal,
+bare-metal) arm-eabi one you can download and use
+
+https://www.linaro.org/downloads/
+
+Or in another one of my github repositories you can get a build_arm
+script
+
+https://github.com/dwelch67/build_gcc
+
+Which builds a cross compiler from sources.  Here again tested on
+Linux (Ubuntu derivative) I used to use prior versions of this
+script on Windows, but I gave up on maintaining that...This latter
+build from the script is what I use as my daily driver arm toolchain.
+And I tend to stay on the cutting edge using the latest release.
+
+Easier to come by but you can also get the llvm/clang toolchain as
+an alternate compiler, it is not like gcc, one toolchain supports
+all targets (normally).  For a few versions now llc will build to
+object so you dont need an assembler which I used to use binutils for
+but now still use binutils to link.  I very rarely use clang/llvm
+now because they change the command line options every version and
+I am tired of trying to keep up.  You can just apt-get it as it is a
+cross compiler, but I have been known to maintain my build_llvm script
+in the above github repo.

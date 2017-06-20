@@ -226,7 +226,9 @@ in order to use this binary.
 
 -----
 
-Start with the blinker programs like blinker01.
+Start with the blinker programs like blinker01.  Blinker01 covers
+specific detail on how the bootstrap works to get the C programs up
+and running, linker script and other build topics.
 
 The raspberry pi zero has an led tied to GPIO pin 47 so these programs
 will blink that led using various methods to determine the time
@@ -414,6 +416,11 @@ tiny widgit you use to display the time on a clock radio.
 The BCM2835 ARM peripheral document mentioned above, which you will
 need along with the ARMv6 Architectural Reference Manual and the
 ARM1176JZFS Technical Reference Manual from ARM's website
+(Actually the ARMv6 is covered in the ARMv5 Architectural Reference
+Manual which was just the ARM ARM and then things got too complicated
+to keep in one manual, just like this additional repo, so they
+made new manuals and ARMv4 through ARMv6 are in the ARMv5 manual
+for the most part).
 http://infocenter.arm.com
 You might have to give up an email address.  Anyway, the document shows
 addresses for things in the form 0x7Exxxxxx, but there is an important
@@ -432,3 +439,121 @@ thing and take it all (and lose graphics/video/display) or move
 the dividing line around a bit.  All of these examples are tiny in
 the KBytes so I dont have to worry about this but may eventually
 depending on your applications you write.
+
+----- toolchain -----
+
+See the TOOLCHAIN file for information on where to get a toolchain to
+use for building these programs.
+
+----- assembly language -----
+
+At time small amounts of assembly language are required for baremetal
+work.  With practice you can often write simple C functions, compile
+and disassemble to discover instructions of interest.  I have provided
+all the assembly you will need to get started.  You are welcome to
+learn more and I recommend it.  As mentioned above one of the big
+jobs in baremetal is reading and interpreting documentation, another is
+mastering the toolchain as your program has to conform to the hardware
+the chip the processor, not some operating system as the compiler is
+setup to do by default.  A major trap you will fall into is simply not
+booting or crashing so early you cant "see" what happened.  So some
+level of understanding of both the tools and assembly language and
+machine code at times will separate you from the pack and allow you
+to debug through these problems.  A big reason for this repo and these
+examples is to get folks past this point, it is scary to dive into
+this kind of programming and the number of ways you can fail is massive
+first and foremost loading your program and resetting or powering on
+and have nothing happen and absolutely no idea how to debug it.  There
+is no way to know the sheer number of folks that have given up at
+that point and never returned to this, a large number of them could have
+been great contributors no doubt.  Some may go off and preach that you
+should never work at this level...
+
+A simple example of what I am talking about is the first time you setup
+a new build system for yourself and a linker script you should check to
+see that it is placing things where want them.   We need the entry point
+which I call _start because I think gnu requires that but perhaps not
+either way it has to be the first instruction, and I have successfully
+done that.
+
+Disassembly of section .text:
+
+00008000 <_start>:
+    8000:	e3a0d902 	mov	sp, #32768	; 0x8000
+    8004:	eb000005 	bl	8020 <notmain>
+
+00008008 <hang>:
+    8008:	eafffffe 	b	8008 <hang>
+
+0000800c <PUT32>:
+    800c:	e5801000 	str	r1, [r0]
+    8010:	e12fff1e 	bx	lr
+
+00008014 <GET32>:
+    8014:	e5900000 	ldr	r0, [r0]
+    8018:	e12fff1e 	bx	lr
+
+0000801c <dummy>:
+    801c:	e12fff1e 	bx	lr
+
+00008020 <notmain>:
+    8020:	e92d4070 	push	{r4, r5, r6, lr}
+    8024:	e59f00ac 	ldr	r0, [pc, #172]	; 80d8 <notmain+0xb8>
+    8028:	ebfffff9 	bl	8014 <GET32>
+    802c:	e3c0160e 	bic	r1, r0, #14680064	; 0xe00000
+    8030:	e3811602 	orr	r1, r1, #2097152	; 0x200000
+
+But another thing that is not obvious here is the branch link (bl)
+to main shows 0x8020 as the address, which is correct, but for this
+instruction set that address is not embedded in the instruction, the
+instruction says branch link to 5+2 instructions ahead of where I am
+now.  I could load and run this code at a different address and at
+least that part would work, and sometimes you need to do this.  This
+is called position independent code (PIC) and you sometimes need
+to know how to do this.
+
+But for now, these examples are tested, I have provided all the
+assembly language you need.
+
+This is not the absolute minimim linker script that one could make
+for gnu ld, but pretty close.
+
+MEMORY
+{
+    ram : ORIGIN = 0x8000, LENGTH = 0x10000
+}
+
+SECTIONS
+{
+    .text : { *(.text*) } > ram
+    .bss : { *(.bss*) } > ram
+}
+
+Again see the bssdata directory on a much longer discussion.  The linker
+script here is its own programming language, and linkers are toolchain
+specific so I dont like to rely heavily on the linker script and
+connnections between it and the main code, so I dont, I do the minimum
+to get it to build for the address spaces I want and place the code
+in the right order so it boots.  The LENGTH value is just an arbitrary
+size I chose, ideally the amount of memory you want to allow for the
+program/data in this case, with some space left for the stack if you
+put your stack above this (see blinker01).  The skeleton for this code
+is highly portable and I dont want to be constantly changing this
+size, so I pick small numbers that fit most places and only increase
+when it fails to build, for that one application.
+
+My prefernce is to call the linker directly rather than have gcc do it
+indirectly (gcc the program is for the most part just a program that
+calls other programs, the compile process takes many steps and a number
+of separate programs it launches, including the assembler at the end as
+it generates assembly language then callse the assembler use -save-temps
+to see the intermediate files, the linker is one of those called unless
+you use -c or -S).  And then feed it a linker script, can do this from
+the gcc command line.  If/when you run into gcc library issues (need
+to do a divide for example) the linker for whatever reason does not
+know where it was launched from or want to use that information, gcc
+does and will use that information to find the gcc library archives in
+relative paths, so at times using gcc with -Xlinker is needed or at
+least makes for less work.  I tend to wait for it to break rather than
+use gcc all the time.
+
