@@ -1,0 +1,109 @@
+
+See the top level README for information on where to find documentation
+for the raspberry pi and the ARM processor inside.  Also find information
+on how to load and run these programs.
+
+This is a floating point example for the pi zero.
+(special treat this example is not in my other raspberry pi repo)
+
+Perhaps I mentioned in a README never to mention floating point...anyway
+
+Many of the ARM cores that preceeded the ARM11 didnt have a floating
+point (nor divide) you did those things with a software library, actually
+gcclib contains those for you (as required since the C language should
+just work).  So extra work is needed both in the command line options
+and in the bootstrap.
+
+What you may not know/understand is the floating point unit is just a
+coprocessor, like cp15 is.  And the instructions actually map into
+the generic coprocessor instruction format, but they have made
+(historically a number of) pseudo instructions so you dont have to know
+that.  And the current generation of floating point instructions
+syntax is different but make the same instructions as the
+prior generation syntax.  Information you can confirm or deny on your
+own.
+
+So we have to tell the ARM to enable the floating point coprocessors
+
+    ;@ enable fpu
+    mrc p15, 0, r0, c1, c0, 2
+    orr r0,r0,#0x300000 ;@ single precision
+    orr r0,r0,#0xC00000 ;@ double precision
+    mcr p15, 0, r0, c1, c0, 2
+    mov r0,#0x40000000
+    fmxr fpexc,r0
+
+before we can use them.
+
+And you can see in the Makefile compared to say the uart05 Makefile
+the additional items added to get the compiler to understand what core
+I have and what floating point instructions I want to use.
+
+As discussed in another README, perhaps blinker01, fun.c is in a
+separate file so that is in a separate optimization domain, by being
+separate they wont optimize out this program completely and simply
+return a value.  I added more_fun() to demonstrate this
+
+prepare and call fun
+
+    8274:   ed9f0a0c    vldr    s0, [pc, #48]   ; 82ac <notmain+0x48>
+    8278:   e3a00c01    mov r0, #256    ; 0x100
+    827c:   ebffff78    bl  8064 <fun>
+    8280:   ebffffb3    bl  8154 <hexstring>
+
+prepare and call fun
+
+    8284:   ed9f0a09    vldr    s0, [pc, #36]   ; 82b0 <notmain+0x4c>
+    8288:   e3a00c01    mov r0, #256    ; 0x100
+    828c:   ebffff74    bl  8064 <fun>
+    8290:   ebffffaf    bl  8154 <hexstring>
+
+optimized out the call to more_fun, answer computed at compile time
+and simply printed out
+
+    8294:   e3a00d06    mov r0, #384    ; 0x180
+    8298:   ebffffad    bl  8154 <hexstring>
+
+same here, no actual floating point, resolved at compile time
+
+    829c:   e3a00c03    mov r0, #768    ; 0x300
+    82a0:   ebffffab    bl  8154 <hexstring>
+
+By using a separate file I can still use the optimizer and at the
+same time not have it optimize out the actual floating point
+instructions.
+
+00008064 <fun>:
+    8064:   ee070a90    vmov    s15, r0
+    8068:   eef87a67    vcvt.f32.u32    s15, s15
+    806c:   ee270a80    vmul.f32    s0, s15, s0
+    8070:   eefc7ac0    vcvt.u32.f32    s15, s0
+    8074:   ee170a90    vmov    r0, s15
+    8078:   e12fff1e    bx  lr
+
+Note the calling convention here, normally we deal with r0-r3 and
+then stack stuff, when you build for hard float the floating point
+registers are used for parameters, need to remember that in case you
+use floating point and interrupts, you need to save the state of the
+machine.
+
+This is not enough
+
+irq:
+    push {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+    bl c_irq_handler
+    pop  {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,lr}
+    subs pc,lr,#4
+
+And/or you need to insure you are not using floating point in your
+interrupt handler.
+
+A lot of work to multiply by 1.5 and 3.0 but I only needed to do one
+or two operations to prove to myself that the floating point unit is
+actually being used (as well as code being generated).
+
+12345678
+00000180
+00000300
+00000180
+00000300

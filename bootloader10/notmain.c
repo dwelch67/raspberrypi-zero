@@ -18,6 +18,7 @@ extern void uart_send ( unsigned int );
 extern unsigned int uart_recv ( void );
 extern void hexstring ( unsigned int );
 //extern void hexstrings ( unsigned int );
+extern void uart_flush ( void );
 
 extern void leds_off ( void );
 
@@ -74,6 +75,7 @@ int notmain ( void )
                 if((ra=='g')||(ra=='G'))
                 {
                     hexstring(entry);
+                    uart_flush();
                     BRANCHTO(entry);
                 }
                 break;
