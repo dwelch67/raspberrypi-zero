@@ -161,6 +161,8 @@ time) may also require soldering or cuts and jumpers to select the
 desired voltage.  I bought a bunch from asia on ebay for like $2 each
 or less with a 3.3v and 5v jumper you want 3.3v for the raspberry pi.
 
+mysetup.png is a picture of my pi zero setup
+
 A uart solution, along with an led and resistor to blink are your
 two most important tools in your baremetal programmers toolbox.  Plus
 jumper wires or some way to hook these things up.  Soldering is
@@ -479,29 +481,29 @@ done that.
 Disassembly of section .text:
 
 00008000 <_start>:
-    8000:	e3a0d902 	mov	sp, #32768	; 0x8000
-    8004:	eb000005 	bl	8020 <notmain>
+    8000:   e3a0d902    mov sp, #32768  ; 0x8000
+    8004:   eb000005    bl  8020 <notmain>
 
 00008008 <hang>:
-    8008:	eafffffe 	b	8008 <hang>
+    8008:   eafffffe    b   8008 <hang>
 
 0000800c <PUT32>:
-    800c:	e5801000 	str	r1, [r0]
-    8010:	e12fff1e 	bx	lr
+    800c:   e5801000    str r1, [r0]
+    8010:   e12fff1e    bx  lr
 
 00008014 <GET32>:
-    8014:	e5900000 	ldr	r0, [r0]
-    8018:	e12fff1e 	bx	lr
+    8014:   e5900000    ldr r0, [r0]
+    8018:   e12fff1e    bx  lr
 
 0000801c <dummy>:
-    801c:	e12fff1e 	bx	lr
+    801c:   e12fff1e    bx  lr
 
 00008020 <notmain>:
-    8020:	e92d4070 	push	{r4, r5, r6, lr}
-    8024:	e59f00ac 	ldr	r0, [pc, #172]	; 80d8 <notmain+0xb8>
-    8028:	ebfffff9 	bl	8014 <GET32>
-    802c:	e3c0160e 	bic	r1, r0, #14680064	; 0xe00000
-    8030:	e3811602 	orr	r1, r1, #2097152	; 0x200000
+    8020:   e92d4070    push    {r4, r5, r6, lr}
+    8024:   e59f00ac    ldr r0, [pc, #172]  ; 80d8 <notmain+0xb8>
+    8028:   ebfffff9    bl  8014 <GET32>
+    802c:   e3c0160e    bic r1, r0, #14680064   ; 0xe00000
+    8030:   e3811602    orr r1, r1, #2097152    ; 0x200000
 
 But another thing that is not obvious here is the branch link (bl)
 to main shows 0x8020 as the address, which is correct, but for this
