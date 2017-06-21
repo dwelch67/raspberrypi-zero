@@ -1,0 +1,158 @@
+
+See the top level README for information on where to find documentation
+for the raspberry pi and the ARM processor inside.  Also find information
+on how to load and run these programs.
+
+This is a pi zero example
+
+Using a start.elf committed to the raspberry pi repo on 2017-06-13
+I wanted to examine the bootstrap placed by the GPU for the ARM before
+releasing reset on the ARM.  I wasnt expecting this one to be all
+that interesting and it isnt, the code for the raspberry pi 2 and
+for the raspberry pi 3 is far more interesting a the cores are more
+complicated and multicore.  But there still exists the possibility that
+the foundation may change the bootcode or other items in this area.
+
+I simply dumped the first 0x1000 bytes of memory which I had not
+otherwise touched.  A number of ways to deal with it but an easy one is
+to just make a pseudo assembly program with the data:
+
+.word 0xE3A00000                                                                                 
+.word 0xE59F1004                                                                                 
+.word 0xE59F20E8                                                                                 
+.word 0xE59FF0E8                                                                                 
+.word 0x00000C42                                                                                 
+.word 0x00000000                                                                                 
+.word 0x00000000 
+.word 0x00000000     
+...
+
+assemble then disassemble, we are relying here on the disassembler
+to disassemble data as well as instructions, so we place data but
+it disassembles them as instructions which was the goal.
+
+
+00000000 <.text>:
+   0:	e3a00000 	mov	r0, #0
+   4:	e59f1004 	ldr	r1, [pc, #4]	; 10 <.text+0x10>
+   8:	e59f20e8 	ldr	r2, [pc, #232]	; f8 <.text+0xf8>
+   c:	e59ff0e8 	ldr	pc, [pc, #232]	; fc <.text+0xfc>
+  10:	00000c42 	
+	...
+  fc:	00008000 	
+ 100:	00000005 	
+ 104:	54410001 
+
+google ATAG linux and find many hits on the topic
+
+For example
+
+www.simtec.co.uk/products/SWLINUX/files/booting_article.html
+
+This is important:
+
+The CPU must be in SVC (supervisor) mode with both IRQ and FIQ interrupts disabled.
+The MMU must be off, i.e. code running from physical RAM with no translated addressing.
+Data cache must be off
+Instruction cache may be either on or off
+CPU register 0 must be 0
+CPU register 1 must be the ARM Linux machine type
+CPU register 2 must be the physical address of the parameter list
+
+
+and this
+
+The list must be stored in RAM and placed in a region of memory where
+neither the kernel decompresser nor initrd manipulation will overwrite
+it. The recommended placement is in the first 16KiB of RAM, usually the
+start of physical RAM plus 0x100 (which avoids zero page exception
+vectors).
+
+I predate DTB stuff but have only slightly dabbled in embedded linux
+at this level.  The 0x100 offset is a compile time option as are some
+other things and/or you just dont mess with it.
+
+Clearly we can see that they are loading 0x8000 into the PC that is
+how they run our program that was loaded at 0x8000.
+
+Before the pis were avaiable to the masses from the info around at the
+time the kernel.img was loaded at 0x0000 and would have needed to
+include this bootloader stuff.  Normally you use redboot or u-boot
+or other to load the kernel image into memory and place the ATAGs/DTB
+and launch.  Linux (for ARM) is as you can see extremely trivial to boot
+it does not require such massivly complicated bootloaders, those are
+just projects that have gotten out of control, feature creep.  So
+it was nice in one respect to have the linux kernel image bundled
+with some bootstrap, but that was also unusual so by the time the
+rest of us could get boards they had changed it to what it is today.
+The GPU acts as the bootloader places the ATAGs and some bootstrap
+code to load r0,r1,r2 and branch to 0x8000.
+
+R2 is loaded with 0x00000000 so I assume that is what they add 0x100
+to to get at the atags.
+
+The ATAGs have this 0x5441xxxx pattern so I dumped those
+
+00000104 54410001 
+00000118 54410002 
+00000128 54410009 
+
+This is the data starting at offset 0x00000100
+
+0x00000005 <--- how many words 
+0x54410001 <--- ATAG_CORE
+0x00000000 
+0x00000000 
+0x00000000 
+0x00000004 <---- how many words
+0x54410002 <---- ATAG_MEM
+0x08000000 <---- size
+0x00000000 <---- start
+0x00000063 <---- how many words
+0x54410009 <---- ATAG_CMDLINE
+
+The command line length lookes wrong to me but clearly it works so
+not going to worry about it.  Interesting items in the command line
+
+vc_mem.mem_base=0xec00000
+vc_mem.mem_size=0x10000000
+
+See bootstrap.txt for a dump and disassembly of what I read out of
+memory.
+
+So the pi zero is advertised as having 512MBytes, which is 0x20000000
+ATAG_MEM appears to be saying you have 128MBytes (for ARM linux) starting
+at 0x00000000.  And the GPU/VC has 256MBytes starting at 0x0EC00000.
+Is what it is...can be changed with config.txt if needed.
+
+Good information to know and you can have your program read these
+atags to find ATAG_MEM to know how deep into memory the GPU as of this
+boot is willing to let you go.  You could wander into the GPUs data/code
+and crash it so tread lightly.
+
+This is a pi zero example, but when the same technique is used for the
+pi2 or pi3 you can see how they are "sorting the cores" I call it.  My
+limited knowledge of ARM cores (just look at the various ARM TRM's) the
+edge of the core (where the chip vendor connects their logic) is a
+clock enable and a reset for each core in a multicore processor which
+means it is up to the vendor to decide how/when to release each core.
+I dont yet know if broadcom has individual core controls, but what
+we see is that all the cores seem to come up at or near the same time
+if you put your code at address zero on these chips and assume it is
+a uniprocessor, then the multiple cores will stomp on each other (try
+to print out the uart, one to four of them will write to the data
+register then start polling for an empty THR, then one or two will
+get a write in and so on, you see repeated characters).  The ARM
+documentation is vague or actually just has a gaping hole, as to the
+values expected in the ID registers, so sorting the cores without
+a single threaded way to "see" what is going on is tricky, disassembling
+the raspberry pi placed bootstrap shows you how they sort the cores
+and then each lands in a loop polling a "mailbox" register waiting for
+it to contain a non-zero address indicating we want that core to
+start running code there.   It also shows us for those platforms that
+they are putting the cores in HYP mode instead of SVC (which violates
+the ARM linux booting page I linked above but this has evolved since
+that page).
+
+But this is a pi zero example and you can see how crazy simple it is
+to boot linux, u-boot and redboot are gross overkill.
