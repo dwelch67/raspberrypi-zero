@@ -3,9 +3,6 @@ See the top level README for information on where to find documentation
 for the raspberry pi and the ARM processor inside.  Also find information
 on how to load and run these programs.
 
-This example is for the pi zero, see other directories for other flavors
-of raspberry pi.
-
 This is an LED blinker example for the pi zero.
 
 The pi zero has one led that is tied to gpio 47.
@@ -100,7 +97,7 @@ void dummy ( void )
 Which produces the same code.
 
 00000000 <dummy>:
-   0:	e12fff1e 	bx	lr
+   0:   e12fff1e    bx  lr
 
 Some toolchains have the ability to see across objects when they
 optimize so you still have to be careful.  I prefer the assembly approach
@@ -113,7 +110,7 @@ options can cause one build to be different from another in the blink
 rate.  It is not really deterministic, thus the desire to use timers in
 the examples that follow.  If you change the number the loop counts to
 and re-build with the same tools, you should see a change in the
-blink rate.  
+blink rate.
 
 Note the Broadcom documentation uses addresses 0x7Exxxxxx for the
 peripherals. That is we assume the GPU's address space to access those

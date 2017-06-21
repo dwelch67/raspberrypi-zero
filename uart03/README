@@ -1,0 +1,15 @@
+See the top level README for information on where to find documentation
+for the raspberry pi and the ARM processor inside.  Also find information
+on how to load and run these programs.
+
+This is a simple uart example for the pi zero.
+
+Based on uart02, the difference is that this is primarily thumb code
+instead of ARM.  ARM in this case meaning the traditional 32 bit
+instruction set and thumb meaning the traditional 16 bit instruction
+subset.
+
+Note this core does not support the thumb2 extensions.
+
+See the top level README for information on how to connect the raspi
+uart to your host computer.

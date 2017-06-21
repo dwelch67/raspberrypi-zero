@@ -2,8 +2,8 @@
 ARMGNU ?= arm-none-eabi
 #ARMGNU ?= arm-linux-gnueabi
 
-AOPS = --warn --fatal-warnings 
-COPS = -Wall -Werror -O2 -nostdlib -nostartfiles -ffreestanding 
+AOPS = --warn --fatal-warnings
+COPS = -Wall -Werror -O2 -nostdlib -nostartfiles -ffreestanding
 
 all : kernel.img
 
@@ -17,12 +17,12 @@ clean :
 	rm -f *.img
 
 vectors.o : vectors.s
-	$(ARMGNU)-as vectors.s -o vectors.o
+	$(ARMGNU)-as $(AOPS) vectors.s -o vectors.o
 
 notmain.o : notmain.c
 	$(ARMGNU)-gcc $(COPS) -c notmain.c -o notmain.o
 
-notmain.elf : memmap vectors.o notmain.o 
+notmain.elf : memmap vectors.o notmain.o
 	$(ARMGNU)-ld vectors.o notmain.o -T memmap -o notmain.elf
 	$(ARMGNU)-objdump -D notmain.elf > notmain.list
 

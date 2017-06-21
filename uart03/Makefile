@@ -20,7 +20,7 @@ vectors.o : vectors.s
 	$(ARMGNU)-as $(AOPS) vectors.s -o vectors.o
 
 notmain.o : notmain.c
-	$(ARMGNU)-gcc $(COPS) -c notmain.c -o notmain.o
+	$(ARMGNU)-gcc $(COPS) -c -mthumb notmain.c -o notmain.o
 
 notmain.elf : memmap vectors.o notmain.o
 	$(ARMGNU)-ld vectors.o notmain.o -T memmap -o notmain.elf

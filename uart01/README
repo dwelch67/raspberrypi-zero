@@ -1,0 +1,24 @@
+
+See the top level README for information on where to find documentation
+for the raspberry pi and the ARM processor inside.  Also find information
+on how to load and run these programs.
+
+This is a simple uart example for the pi zero.
+
+Okay this was incredibly painful.  I might have saved a few hours if
+was at the office with an oscilloscope, I eventually had to fashion
+something to look at the output using an mbed.
+
+The documentation for the chip has some glaring errors.  The IER and
+IIR register descriptions are screwy.  The one that killed me was
+the word length.  The document says that the single bit controls 7
+bits per word vs 8 bits per word.  And that bit 1 and some above
+do not do anything, they might on real 16550's but not here.  Well
+that is wrong.  If bits 1:0 are 00 you get 7 bits if bits 1:0 are 01
+you get 7 bits.  You need bit 1 set to get 8 bits.
+
+See the top level README for information about connecting your host
+computer to the uart on the raspi.  This is a tx only example.
+
+This example sets up the uart for 115200 baud, and blasts the characters
+0123456701234567...forever as fast as it can.
